@@ -1,5 +1,6 @@
 #include "innerproduct.h"
 #include <cilk/reducer_opadd.h>
+
 #ifdef CILKPAR
 #include <cilk.h>
 #else
@@ -65,30 +66,25 @@ double hyperobject_cilkified(double *a, double *b, int n)
     int outerCountMax = n/COARSENESS;
     int extraValues = n%COARSENESS;
     double * miniSums= new double [outerCountMax];
-    double sum = 0;
 
-    cilk::reducer< cilk::opadd <double> > sum;
+    cilk::reducer< cilk::op_add <double> > sum;
     cilk_for (int outerCount = 0; outerCount < outerCountMax; ++outerCount){
-
+        sum = 0;
         for (int innerCount = 0; innerCount < COARSENESS; ++innerCount){
-            sum += a[outerCount * COARSENESS + innerCount] * b[outerCount * COARSENESS + innerCount];
+            sum = sum + a[outerCount * COARSENESS + innerCount] * b[outerCount * COARSENESS + innerCount];
 
             // This loop is only for extra values due to n/COARSENESS rounding down with division.
             if(extraValues > 0 && outerCount == outerCountMax - 1 && innerCount == COARSENESS - 1){
                 for(int extraCount = 0; extraCount < extraValues;++extraCount){
-                    sum  += a[outerCount * COARSENESS + innerCount + extraCount] * b[outerCount * COARSENESS + innerCount + extraCount];
+                    sum  = sum +  a[outerCount * COARSENESS + innerCount + extraCount] * b[outerCount * COARSENESS + innerCount + extraCount];
                 }
 
             }
         }
 
     }
+    double fullSum = sum.get_value();
 
-    // summing the values
-    for (int sumCount = 0; sumCount < outerCountMax; ++sumCount){
-        sum += miniSums[sumCount];
-    }
-
-    return sum;
+    return fullSum;
 }
 
