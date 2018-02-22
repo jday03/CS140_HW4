@@ -12,7 +12,7 @@ static const int COARSENESS = 2;
 double rec_cilkified(double *a, double *b, int n)
 {
     double sum = 0;
-	if(n == COARSENESS){
+	if(n <= COARSENESS){
         for(int count = 0; count < n; ++count){
             sum += a[count] * b[count];
         }
@@ -22,7 +22,7 @@ double rec_cilkified(double *a, double *b, int n)
         int split1 = n/2;
         int split2 = n-split1;
         double sum1 = cilk_spawn rec_cilkified(a,b,split1);
-        double sum2 = cilk_spawn rec_cilkified(a+split1,b+split1,split2);
+        double sum2 = cilk_spawn rec_cilkified((a+split1),(b+split1),split2);
         cilk_sync;
         sum = sum1 + sum2;
     }
@@ -58,16 +58,16 @@ double loop_cilkified(double *a, double *b, int n)
     }
 
 	return sum;
+
 }
 
 double hyperobject_cilkified(double *a, double *b, int n)
 {
-    int outerCountMax = n/COARSENESS;
+   int outerCountMax = n/COARSENESS;
     int extraValues = n%COARSENESS;
     double * miniSums= new double [outerCountMax];
-    double sum = 0;
 
-    cilk::reducer< cilk::op_add<int> > sum1(0);
+    cilk::reducer< cilk::op_add<double> > sum1;
     cilk_for (int outerCount = 0; outerCount < outerCountMax; ++outerCount){
 
         for (int innerCount = 0; innerCount < COARSENESS; ++innerCount){
@@ -84,11 +84,7 @@ double hyperobject_cilkified(double *a, double *b, int n)
 
     }
 
-    // summing the values
-    for (int sumCount = 0; sumCount < outerCountMax; ++sumCount){
-        *sum1 += miniSums[sumCount];
-    }
-
     return sum1.get_value();
+
 }
 
