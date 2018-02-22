@@ -67,16 +67,16 @@ double hyperobject_cilkified(double *a, double *b, int n)
     double * miniSums= new double [outerCountMax];
     double sum = 0;
 
-    cilk::reducer< cilk::opadd <double> > sum;
+    cilk::reducer< cilk::op_add<int> > sum1(0);
     cilk_for (int outerCount = 0; outerCount < outerCountMax; ++outerCount){
 
         for (int innerCount = 0; innerCount < COARSENESS; ++innerCount){
-            sum += a[outerCount * COARSENESS + innerCount] * b[outerCount * COARSENESS + innerCount];
+            *sum1 += a[outerCount * COARSENESS + innerCount] * b[outerCount * COARSENESS + innerCount];
 
             // This loop is only for extra values due to n/COARSENESS rounding down with division.
             if(extraValues > 0 && outerCount == outerCountMax - 1 && innerCount == COARSENESS - 1){
                 for(int extraCount = 0; extraCount < extraValues;++extraCount){
-                    sum  += a[outerCount * COARSENESS + innerCount + extraCount] * b[outerCount * COARSENESS + innerCount + extraCount];
+                    *sum1  += a[outerCount * COARSENESS + innerCount + extraCount] * b[outerCount * COARSENESS + innerCount + extraCount];
                 }
 
             }
@@ -86,9 +86,9 @@ double hyperobject_cilkified(double *a, double *b, int n)
 
     // summing the values
     for (int sumCount = 0; sumCount < outerCountMax; ++sumCount){
-        sum += miniSums[sumCount];
+        *sum1 += miniSums[sumCount];
     }
 
-    return sum;
+    return sum1.get_value();
 }
 
