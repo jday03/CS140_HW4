@@ -1,4 +1,13 @@
 #include "innerproduct.h"
+#include <cilk/reducer_opadd.h>
+#ifdef CILKPAR
+#include <cilk.h>
+#else
+#define cilk_for for
+#define cilk_main main
+#define cilk_spawn
+#define cilk_sync
+#endif
 static const int COARSENESS = 2;
 double rec_cilkified(double *a, double *b, int n)
 {
@@ -26,13 +35,14 @@ double loop_cilkified(double *a, double *b, int n)
     int extraValues = n%COARSENESS;
     double * miniSums= new double [outerCountMax];
     double sum = 0;
-    cilk_for for(int outerCount = 0; outerCount < outerCountMax; ++outerCount){
+
+    cilk_for (int outerCount = 0; outerCount < outerCountMax; ++outerCount){
         miniSums[outerCount] = 0;
         for (int innerCount = 0; innerCount < COARSENESS; ++innerCount){
             miniSums[outerCount] += a[outerCount * COARSENESS + innerCount] * b[outerCount * COARSENESS + innerCount];
 
             // This loop is only for extra values due to n/COARSENESS rounding down with division.
-            if(extraValues > 0 && outerCount = outerCountMax - 1 && innerCount = COARSENESS - 1){
+            if(extraValues > 0 && outerCount == outerCountMax - 1 && innerCount == COARSENESS - 1){
                 for(int extraCount = 0; extraCount < extraValues;++extraCount){
                     miniSums[outerCount] += a[outerCount * COARSENESS + innerCount + extraCount] * b[outerCount * COARSENESS + innerCount + extraCount];
                 }
@@ -57,14 +67,14 @@ double hyperobject_cilkified(double *a, double *b, int n)
     double * miniSums= new double [outerCountMax];
     double sum = 0;
 
-    cilk::reducer< cilk::opadd<double> > sum;
-    cilk_for for(int outerCount = 0; outerCount < outerCountMax; ++outerCount){
+    cilk::reducer< cilk::opadd <double> > sum;
+    cilk_for (int outerCount = 0; outerCount < outerCountMax; ++outerCount){
 
         for (int innerCount = 0; innerCount < COARSENESS; ++innerCount){
             sum += a[outerCount * COARSENESS + innerCount] * b[outerCount * COARSENESS + innerCount];
 
             // This loop is only for extra values due to n/COARSENESS rounding down with division.
-            if(extraValues > 0 && outerCount = outerCountMax - 1 && innerCount = COARSENESS - 1){
+            if(extraValues > 0 && outerCount == outerCountMax - 1 && innerCount == COARSENESS - 1){
                 for(int extraCount = 0; extraCount < extraValues;++extraCount){
                     sum  += a[outerCount * COARSENESS + innerCount + extraCount] * b[outerCount * COARSENESS + innerCount + extraCount];
                 }
