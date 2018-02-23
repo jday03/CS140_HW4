@@ -1,13 +1,5 @@
 #include "innerproduct.h"
 #include <cilk/reducer_opadd.h>
-#ifdef CILKPAR
-#include <cilk.h>
-#else
-#define cilk_for for
-#define cilk_main main
-#define cilk_spawn
-#define cilk_sync
-#endif
 static const int COARSENESS = 3000;
 
 double rec_cilkified(double *a, double *b, int n)
