@@ -8,7 +8,8 @@
 #define cilk_spawn
 #define cilk_sync
 #endif
-static const int COARSENESS = 2;
+static const int COARSENESS = 3000;
+
 double rec_cilkified(double *a, double *b, int n)
 {
     double sum = 0;
@@ -43,7 +44,8 @@ double loop_cilkified(double *a, double *b, int n)
 
             // This loop is only for extra values due to n/COARSENESS rounding down with division.
             if(extraValues > 0 && outerCount == outerCountMax - 1 && innerCount == COARSENESS - 1){
-                for(int extraCount = 0; extraCount < extraValues;++extraCount){
+
+                for(int extraCount = 1; extraCount < extraValues + 1;++extraCount){
                     miniSums[outerCount] += a[outerCount * COARSENESS + innerCount + extraCount] * b[outerCount * COARSENESS + innerCount + extraCount];
                 }
 
@@ -51,6 +53,24 @@ double loop_cilkified(double *a, double *b, int n)
         }
 
     }
+
+
+// if coarseness > n
+    if(outerCountMax == 0){
+        double sum = 0;
+        for (int innerCount = 0; innerCount < n; ++innerCount){
+            sum += a[innerCount] * b[innerCount];
+
+            // This loop is only for extra values due to n/COARSENESS rounding down with division.
+            if(extraValues > 0 && innerCount == n - 1){
+                for(int extraCount = 1; extraCount < extraValues + 1;++extraCount){
+                    sum  += a[innerCount + extraCount] * b[innerCount + extraCount];
+                }
+            }
+        }
+        return sum;
+    }
+
 
     // summing the values
     for (int sumCount = 0; sumCount < outerCountMax; ++sumCount){
@@ -63,6 +83,7 @@ double loop_cilkified(double *a, double *b, int n)
 
 double hyperobject_cilkified(double *a, double *b, int n)
 {
+
    int outerCountMax = n/COARSENESS;
     int extraValues = n%COARSENESS;
     double * miniSums= new double [outerCountMax];
@@ -75,7 +96,7 @@ double hyperobject_cilkified(double *a, double *b, int n)
 
             // This loop is only for extra values due to n/COARSENESS rounding down with division.
             if(extraValues > 0 && outerCount == outerCountMax - 1 && innerCount == COARSENESS - 1){
-                for(int extraCount = 0; extraCount < extraValues;++extraCount){
+                for(int extraCount = 1; extraCount < extraValues + 1;++extraCount){
                     *sum1  += a[outerCount * COARSENESS + innerCount + extraCount] * b[outerCount * COARSENESS + innerCount + extraCount];
                 }
 
@@ -84,7 +105,23 @@ double hyperobject_cilkified(double *a, double *b, int n)
 
     }
 
+
+    if(outerCountMax == 0){
+        for (int innerCount = 0; innerCount < n; ++innerCount){
+            *sum1 += a[innerCount] * b[innerCount];
+
+            // This loop is only for extra values due to n/COARSENESS rounding down with division.
+            if(extraValues > 0 && innerCount == n - 1){
+                for(int extraCount = 1; extraCount < extraValues + 1;++extraCount){
+                    *sum1  += a[innerCount + extraCount] * b[innerCount + extraCount];
+                }
+
+            }
+        }
+    }
+
     return sum1.get_value();
+
 
 }
 
